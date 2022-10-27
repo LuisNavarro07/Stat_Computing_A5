@@ -5,31 +5,39 @@
 library(plyr)
 
 ### Function LLR 
-llr_1 = function(x, y, z, omega) {
-  fits = sapply(z, compute_f_hat_1, x, y, omega)
+llr_3 = function(x, y, z, omega) {
+  fits = sapply(z, compute_f_hat_3, x, y, omega)
   return(fits)
 }
 
 
 ### Function F Hat
-compute_f_hat_1 = function(z, x, y, omega) {
+compute_f_hat_3 = function(z, x, y, omega) {
   ### Change this line --> Wz = make_weight_matrix(x, z, omega)
   ### For this line --> Wz = diag(make_weight_matrix(x, z, omega))
   Wz = diag(make_weight_matrix(x, z, omega))
   X = make_predictor_matrix(x)
-  f_hat = c(1, z) %*% solve(inner_mat(x,Wz)) %*% t(X) %*% Wz %*% y
+  c <- matrix_product(x,y,Wz)
+  ### Change this line --> f_hat = c(1, z) %*% solve(inner_mat(x,Wz)) %*% t(X) %*% Wz %*% y
+  ### For this lines --> f_hat = c[1] + c[2]*z
+  f_hat = c[1] + c[2]*z
   return(f_hat)
 }
 
 ### Change to the f_hat line of code using apply 
 ### First thing to note is that t(X) %*% Wz %*% X is always a 2x2 matrix, where the entries of the matrix are easy to compute
-inner_mat <- function(x,Wz){
-  inn_mat <- matrix(data=NA, nrow=2, ncol=2)
-  inn_mat[1,1] <- sum(Wz)
-  inn_mat[2,1] <- sum(x*Wz)
-  inn_mat[1,2] <- sum(x*Wz)
-  inn_mat[2,2] <- sum(x*Wz*x)
-  return(inn_mat)
+matrix_product <- function(x,y,Wz){
+  ### Define all the multiplications in vectorized form. In this case all should be nX1 vectors 
+  objects <- list(Wz,Wz*x,Wz*x*x,Wz*y,Wz*x*y)
+  sums <- as.double(lapply(objects,sum))
+  inv_fac <- 1/((sums[1]*sums[3])-(sums[2]^2))
+  inv_val <- sums[1:3]*inv_fac
+  #
+  c1 <- sums[4]*inv_val[3] - sums[5]*inv_val[2]
+  c2 <- -sums[4]*inv_val[2] + sums[5]*inv_val[1]
+  
+  c <- c(c1,c2)
+  return(c)
 }
 
 #### My versions of make_weight_matrix and make_predictor_matrix
